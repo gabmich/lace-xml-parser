@@ -2,6 +2,7 @@ import os
 import xml.dom.minidom
 from docxtpl import DocxTemplate, InlineImage
 from docx.shared import Mm
+from .helpers import get_node_value
 
 
 NEEDED_LACE_FILES = ['ImageReport_0.xml',]
@@ -9,7 +10,6 @@ NEEDED_LACE_FILES = ['ImageReport_0.xml',]
 
 class LaceParser():
     folder_path             = None
-    xml_lace_export_path    = "./lace_xml_export/Images/ImageReport_0.xml"
     xml_document            = None
     xml_items               = []
     evidences_ids           = set()
@@ -18,11 +18,11 @@ class LaceParser():
     template_for_list       = "./templates/basic_template_3.docx"
 
     def __init__(self, folder_path):
-        self.check_folder('../Sample Data/')
-        # self.parse_xml_document()
-        # self.get_all_items()
-        # self.extract_evidences()
-        # self.extract_items_content()
+        self.check_folder(folder_path)
+        self.parse_xml_document()
+        self.get_all_items()
+        self.extract_evidences()
+        self.extract_items_content()
 
     def check_folder(self, folder_path):
         # chef if folder_path exists and ensure that it's a valid directory
@@ -47,11 +47,12 @@ class LaceParser():
 
 
     def parse_xml_document(self):
-        self.xml_document = xml.dom.minidom.parse(self.xml_lace_export_path)
+        self.xml_document = xml.dom.minidom.parse(f'{self.folder_path}/ImageReport_0.xml')
+        print(self.xml_document)
 
     def get_all_items(self):
         self.xml_items = self.xml_document.getElementsByTagName("Item")
-        # print(self.xml_items)
+        print(self.xml_items)
 
     def extract_evidences(self):
         for item in self.xml_items:
@@ -64,20 +65,20 @@ class LaceParser():
             items = []
             for item in self.xml_items:
                 evidence_item = EvidenceItem(
-                                    item.getElementsByTagName("EvidenceID")[0].firstChild.nodeValue,
-                                    item.getElementsByTagName("FileID")[0].firstChild.nodeValue,
-                                    item.getElementsByTagName("Thumbnail")[0].firstChild.nodeValue,
-                                    item.getElementsByTagName("MD5")[0].firstChild.nodeValue,
-                                    item.getElementsByTagName("Partition")[0].firstChild.nodeValue,
-                                    item.getElementsByTagName("FullPath")[0].firstChild.nodeValue,
-                                    item.getElementsByTagName("Filename")[0].firstChild.nodeValue,
-                                    item.getElementsByTagName("CreateDate")[0].firstChild.nodeValue if item.getElementsByTagName("CreateDate")[0].firstChild else None)
+                                    evidence_id=get_node_value(item,"EvidenceID"),
+                                    file_id=get_node_value(item,"FileID"),
+                                    image_path=get_node_value(item,"Thumbnail"),
+                                    md5=get_node_value(item,"MD5"),
+                                    partition=get_node_value(item,"Partition"),
+                                    full_path=get_node_value(item,"FullPath"),
+                                    file_name=get_node_value(item,"Filename"),
+                                    created_at=get_node_value(item,"CreateDate"))
                 items.append(evidence_item)
 
-                # ICI : CONVERTIR CREATED_AT EN FORMAT DE DATE PLUS LISIBLE AU BESOIN
+            # ICI : CONVERTIR CREATED_AT EN FORMAT DE DATE PLUS LISIBLE AU BESOIN
             print('ITEMS :', items)
-            export = DocxExporter(evidence_items=items, evidence=evidence)
-            print('EXPORT :', export)
+            # export = DocxExporter(evidence_items=items, evidence=evidence)
+            # print('EXPORT :', export)
 
 
 class EvidenceItem():
@@ -143,15 +144,10 @@ class DocxExporter():
         self.gallery_docx = DocxTemplate(self.gallery_template_path)
 
     def sort_items_by_creation_date(self, evidence_items):
-        self.evidence_items = sorted(evidence_items, key=lambda item:(item.created_at, item.created_at is None, item.created_at == ""))
+        # self.evidence_items = sorted(evidence_items, key=lambda item:(item.created_at, item.created_at is None, item.created_at == ""))
         print('SORTED ITEMS :', self.evidence_items)
 
     def create_docx_img(self):
         image      = InlineImage("",
                                  image_descriptor=f"./lace_xml_export/Images/asdf",
                                  height=Mm(40))
-
-
-
-
-a = LaceParser('asdf')
