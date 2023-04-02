@@ -12,6 +12,7 @@ class LaceParser():
     folder_path             = None
     xml_document            = None
     xml_items               = []
+    extracted_items         = []
     evidences_ids           = set()
     evidences               = dict()
     template_for_gallery    = "./templates/basic_template_2.docx"
