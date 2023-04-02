@@ -2,7 +2,7 @@ import os
 import xml.dom.minidom
 from docxtpl import DocxTemplate, InlineImage
 from docx.shared import Mm
-from .helpers import get_node_value
+from resources.helpers import get_node_value
 
 
 NEEDED_LACE_FILES = ['ImageReport_0.xml',]
@@ -56,12 +56,14 @@ class LaceParser():
 
     def extract_evidences(self):
         for item in self.xml_items:
-            evidence_id = item.getElementsByTagName("EvidenceID")[0].firstChild.nodeValue
+            evidence_id = get_node_value(item, "EvidenceID") # item.getElementsByTagName("EvidenceID")[0].firstChild.nodeValue
             self.evidences_ids.add(evidence_id)
-        print('EVIDENCES :', self.evidences_ids)
+        self.evidences = [Evidence(evidence_id) for evidence_id in self.evidences_ids]
+        print('EVIDENCES IDS :', self.evidences_ids)
+        print('EVIDENCES OBJECTS :', self.evidences)
 
     def extract_items_content(self):
-        for evidence in self.evidences_ids:
+        for evidence in self.evidences:
             items = []
             for item in self.xml_items:
                 evidence_item = EvidenceItem(
@@ -81,10 +83,20 @@ class LaceParser():
             # print('EXPORT :', export)
 
 
+class Evidence():
+    evidence_id             = ""
+    evidence_items          = []
+
+    def __init__(self, evidence_id):
+        self.evidence_id = evidence_id
+
+
 class EvidenceItem():
     evidence_id             = ""
+    evidence                = None
     file_id                 = ""
     image_path              = ""
+    video_thumbnails_paths  = []
     md5                     = ""
     partition               = ""
     full_path               = ""
@@ -113,6 +125,7 @@ class EvidenceItem():
             "file_name":self.file_name,
             "image":self.image,
             "created_at":self.created_at,
+            "video_thumbnails_paths":self.video_thumbnails_paths,
         }
 
 
