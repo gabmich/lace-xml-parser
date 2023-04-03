@@ -25,6 +25,7 @@ class LaceParser():
         self.extract_all_items()
         self.extract_evidences()
         self.extract_items_content()
+        self.export_to_templates()
 
     def check_folder(self, folder_path):
         # checks if folder_path exists and ensure that it's a valid directory
@@ -89,6 +90,11 @@ class LaceParser():
             # export = DocxExporter(evidence_items=items, evidence=evidence)
             # print('EXPORT :', export)
 
+    def export_to_templates(self):
+        for evidence in self.evidences:
+            export = DocxExporter(evidence_items=self.evidences[evidence], evidence=evidence)
+            print("EXPORTED !")
+
 
 class Evidence():
     evidence_id             = ""
@@ -149,15 +155,18 @@ class EvidenceItem():
 
 class DocxExporter():
     evidence_items          = []
-    gallery_template_path   = "./templates/template_for_gallery.docx"
+
+    gallery_template_path   = "./resources/templates/Images/template_for_gallery.docx"
+    listing_template_path   = "./resources/templates/Images/template_for_list.docx"
+
     gallery_docx            = None
-    listing_template_path   = "./templates/basic_list_template.docx"
     listing_docx            = None
+    
     start_date              = "Date de début"
     end_date                = "Date de fin"
 
     def __init__(self, evidence_items, evidence):
-        self.sort_items_by_creation_date(evidence_items)
+        self.sort_items_by_date(evidence_items)
         self.create_docx_instances()
         context = { "items" : self.evidence_items,
                     "evidence": evidence,
@@ -174,7 +183,7 @@ class DocxExporter():
         self.listing_docx = DocxTemplate(self.listing_template_path)
         self.gallery_docx = DocxTemplate(self.gallery_template_path)
 
-    def sort_items_by_creation_date(self, evidence_items):
+    def sort_items_by_date(self, evidence_items):
         # self.evidence_items = sorted(evidence_items, key=lambda item:(item.created_at, item.created_at is None, item.created_at == ""))
         print("SORTED ITEMS :", self.evidence_items)
 
