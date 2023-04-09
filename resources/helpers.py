@@ -1,6 +1,12 @@
 from datetime import datetime
 
 
+def debug(obj):
+    print(100*'*')
+    print(obj)
+    print(100*'*')
+
+
 def get_node_value(item, tag_name):
     if all([item.getElementsByTagName(tag_name),
             item.getElementsByTagName(tag_name)[0],
@@ -16,7 +22,7 @@ def to_chunks(xs, n):
 
 
 def create_dt(datetime_string, datetime_format):
-    dt = None 
+    dt = None
 
     if datetime_string:
         try:

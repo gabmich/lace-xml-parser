@@ -1,8 +1,9 @@
 import os
 import xml.dom.minidom
+from datetime import datetime
 from docxtpl import DocxTemplate, InlineImage
 from docx.shared import Mm
-from resources.helpers import get_node_value, create_dt
+from resources.helpers import get_node_value, create_dt, debug
 
 
 NEEDED_LACE_FILES = ["ImageReport_0.xml",]
@@ -95,14 +96,14 @@ class LaceParser():
             export = DocxExporter(evidence_items=self.evidences[evidence], evidence=evidence)
             print("EXPORTED !")
 
-
+"""
 class Evidence():
     evidence_id             = ""
     evidence_items          = []
 
     def __init__(self, evidence_id):
         self.evidence_id = evidence_id
-
+"""
 
 class EvidenceItem():
     evidence_id             = ""
@@ -115,7 +116,7 @@ class EvidenceItem():
     full_path               = ""
     file_name               = ""
     created_at              = None
-    update_at               = None
+    updated_at              = None
     image                   = None
 
     def __init__(self,
@@ -135,7 +136,11 @@ class EvidenceItem():
         self.partition = partition
         self.full_path = full_path
         self.file_name = file_name
+
         self.created_at = created_at
+        self.updated_at = updated_at
+        self.created_at_str = datetime.strftime(self.created_at, '%d.%m.%Y') if self.created_at else ''
+        self.updated_at_str = datetime.strftime(self.updated_at, '%d.%m.%Y') if self.updated_at else ''
 
     @property
     def serialize(self):
@@ -166,8 +171,12 @@ class DocxExporter():
     end_date                = "Date de fin"
 
     def __init__(self, evidence_items, evidence):
-        self.sort_items_by_date(evidence_items)
+        self.evidence_items = evidence_items
+        
+        self.sort_items_by_date()
+        """
         self.create_docx_instances()
+
         context = { "items" : self.evidence_items,
                     "evidence": evidence,
                     "start_date": self.start_date,
@@ -175,7 +184,7 @@ class DocxExporter():
 
         self.listing_docx.render(context)
         self.listing_docx.save(f"Evidence {evidence} list.docx")
-
+        """
         # self.gallery_docx.render(context)
         # self.gallery_docx.save(f"Evidence {evidence} images.docx")
 
@@ -183,9 +192,18 @@ class DocxExporter():
         self.listing_docx = DocxTemplate(self.listing_template_path)
         self.gallery_docx = DocxTemplate(self.gallery_template_path)
 
-    def sort_items_by_date(self, evidence_items):
-        # self.evidence_items = sorted(evidence_items, key=lambda item:(item.created_at, item.created_at is None, item.created_at == ""))
-        print("SORTED ITEMS :", self.evidence_items)
+    def sort_items_by_date(self):
+        if self.evidence_items and len(self.evidence_items) > 0:
+            self.evidence_items
+            dated_elements = sorted(
+                    [item for item in self.evidence_items if (item.updated_at and isinstance(item.updated_at, datetime))],
+                    key=lambda item:(item.updated_at))
+
+            undated_elements = [item for item in self.evidence_items if not item.updated_at]
+
+            a = dated_elements.append(undated_elements)
+
+            debug(f'{type(dated_elements)} - {type(undated_elements)} - {len(a)}')
 
     def create_docx_img(self):
         image      = InlineImage("",
