@@ -31,3 +31,10 @@ def create_dt(datetime_string, datetime_format):
             print("ERROR WITH DATETIME STRING", datetime_string, "===>", str(e))
 
     return dt
+
+
+def to_chunks(xs, n):
+    """ Split a list into list of chunks of length of n """
+    n = max(1, n)
+
+    return (xs[i:i+n] for i in range(0, len(xs), n))

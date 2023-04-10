@@ -3,11 +3,15 @@ import xml.dom.minidom
 from datetime import datetime
 from docxtpl import DocxTemplate, InlineImage
 from docx.shared import Mm
-from resources.helpers import get_node_value, create_dt, debug
+from resources.helpers import (get_node_value,
+                               create_dt,
+                               debug,
+                               to_chunks,)
 
 
 NEEDED_LACE_FILES = ["ImageReport_0.xml",]
 LACE_DT_FORMAT    = "%a, %b %d, %Y %H:%M:%S %Z"
+EXPORT_PATH       = "../output"
 
 
 class LaceParser():
@@ -74,17 +78,7 @@ class LaceParser():
                 if evidence_id == evidence:
                     created_at = create_dt(get_node_value(item,"CreateDate"), LACE_DT_FORMAT)
                     updated_at = create_dt(get_node_value(item,"ModifyDate"), LACE_DT_FORMAT)
-                    #evidence_item = EvidenceItem(
-                    #                    evidence_id=evidence_id,
-                    #                    file_id=get_node_value(item,"FileID"),
-                    #                    image_path=get_node_value(item,"Thumbnail"),
-                    #                    md5=get_node_value(item,"MD5"),
-                    #                    partition=get_node_value(item,"Partition"),
-                    #                    full_path=get_node_value(item,"FullPath"),
-                    #                    file_name=get_node_value(item,"Filename"),
-                    #                    created_at=created_at,
-                    #                    updated_at=updated_at,
-                    #                    folder_path=self.folder_path)
+
                     evidence_item = {
                         "evidence_id": evidence_id,
                         "file_id": get_node_value(item,"FileID"),
@@ -96,7 +90,8 @@ class LaceParser():
                         "file_name": get_node_value(item,"Filename"),
                         "created_at": created_at,
                         "updated_at": updated_at,
-                        "folder_path": self.folder_path
+                        "folder_path": self.folder_path,
+                        "image": None,
                     }
 
                     self.evidences[evidence].append(evidence_item)
@@ -111,66 +106,6 @@ class LaceParser():
             export = DocxExporter(evidence_items=self.evidences[evidence], evidence=evidence, count=i+1)
             print(evidence, "EXPORTED !")
 
-"""
-class EvidenceItem():
-    evidence_id             = ""
-    evidence                = None
-    folder_path             = ""
-    file_id                 = ""
-    image_path              = ""
-    video_thumbnails_paths  = []
-    md5                     = ""
-    partition               = ""
-    full_path               = ""
-    file_name               = ""
-    created_at              = None
-    updated_at              = None
-    image                   = None
-
-    def __init__(self,
-                 evidence_id,
-                 file_id,
-                 image_path,
-                 md5,
-                 partition,
-                 full_path,
-                 file_name,
-                 created_at,
-                 updated_at,
-                 folder_path):
-        self.evidence_id = evidence_id
-        self.file_id = file_id
-        self.image_path = image_path
-        self.md5 = md5
-        self.partition = partition
-        self.full_path = full_path
-        self.file_name = file_name
-
-        self.created_at = created_at
-        self.updated_at = updated_at
-        self.created_at_str = datetime.strftime(self.created_at, '%d.%m.%Y') if self.created_at else ''
-        self.updated_at_str = datetime.strftime(self.updated_at, '%d.%m.%Y') if self.updated_at else ''
-        self.folder_path = folder_path
-
-    @property
-    def image_full_path(self):
-        return f"{self.folder_path}/{self.image_path}"
-
-    @property
-    def serialize(self):
-        return {
-            "file_id":self.file_id,
-            "image_path":self.image_path,
-            "md5":self.md5,
-            "partition":self.partition,
-            "full_path":self.full_path,
-            "file_name":self.file_name,
-            "image":self.image,
-            "created_at":self.created_at,
-            "updated_at":self.updated_at,
-            "video_thumbnails_paths":self.video_thumbnails_paths,
-        }
-"""
 
 class DocxExporter():
     evidence                = ""
@@ -197,6 +132,7 @@ class DocxExporter():
         self.create_docx_instances()
         self.create_context()
         self.create_docx_images()
+        self.split_items_to_chunks()
         self.render()
 
     def create_docx_instances(self):
@@ -208,7 +144,8 @@ class DocxExporter():
                          "evidence": self.evidence,
                          "start_date": self.start_date,
                          "end_date": self.end_date,
-                         "count": self.count}
+                         "count": self.count,
+                         "chunks": [],}
 
     def sort_items_by_date(self):
         if self.evidence_items and len(self.evidence_items) > 0:
@@ -227,11 +164,12 @@ class DocxExporter():
                                         image_descriptor=item["image_full_path"],
                                         height=Mm(40))
 
+    def split_items_to_chunks(self):
+        self.context["chunks"] = to_chunks(self.evidence_items, 3)
+
     def render(self):
-        for item in self.context['items']:
-            print(item["image"])
         self.listing_docx.render(self.context)
-        self.listing_docx.save(f"Evidence {self.evidence} list.docx")
+        self.listing_docx.save(f"{EXPORT_PATH}/Evidence {self.evidence} list.docx")
 
         self.gallery_docx.render(self.context)
-        self.gallery_docx.save(f"Evidence {self.evidence} images.docx")
+        self.gallery_docx.save(f"{EXPORT_PATH}/Evidence {self.evidence} images.docx")
