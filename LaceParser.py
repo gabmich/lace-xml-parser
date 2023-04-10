@@ -74,16 +74,31 @@ class LaceParser():
                 if evidence_id == evidence:
                     created_at = create_dt(get_node_value(item,"CreateDate"), LACE_DT_FORMAT)
                     updated_at = create_dt(get_node_value(item,"ModifyDate"), LACE_DT_FORMAT)
-                    evidence_item = EvidenceItem(
-                                        evidence_id=evidence_id,
-                                        file_id=get_node_value(item,"FileID"),
-                                        image_path=get_node_value(item,"Thumbnail"),
-                                        md5=get_node_value(item,"MD5"),
-                                        partition=get_node_value(item,"Partition"),
-                                        full_path=get_node_value(item,"FullPath"),
-                                        file_name=get_node_value(item,"Filename"),
-                                        created_at=created_at,
-                                        updated_at=updated_at)
+                    #evidence_item = EvidenceItem(
+                    #                    evidence_id=evidence_id,
+                    #                    file_id=get_node_value(item,"FileID"),
+                    #                    image_path=get_node_value(item,"Thumbnail"),
+                    #                    md5=get_node_value(item,"MD5"),
+                    #                    partition=get_node_value(item,"Partition"),
+                    #                    full_path=get_node_value(item,"FullPath"),
+                    #                    file_name=get_node_value(item,"Filename"),
+                    #                    created_at=created_at,
+                    #                    updated_at=updated_at,
+                    #                    folder_path=self.folder_path)
+                    evidence_item = {
+                        "evidence_id": evidence_id,
+                        "file_id": get_node_value(item,"FileID"),
+                        "image_path": get_node_value(item,"Thumbnail"),
+                        "image_full_path": f"{self.folder_path}/{get_node_value(item,'Thumbnail')}",
+                        "md5": get_node_value(item,"MD5"),
+                        "partition": get_node_value(item,"Partition"),
+                        "full_path": get_node_value(item,"FullPath"),
+                        "file_name": get_node_value(item,"Filename"),
+                        "created_at": created_at,
+                        "updated_at": updated_at,
+                        "folder_path": self.folder_path
+                    }
+
                     self.evidences[evidence].append(evidence_item)
 
             # ICI : CONVERTIR CREATED_AT EN FORMAT DE DATE PLUS LISIBLE AU BESOIN
@@ -92,22 +107,15 @@ class LaceParser():
             # print('EXPORT :', export)
 
     def export_to_templates(self):
-        for evidence in self.evidences:
-            export = DocxExporter(evidence_items=self.evidences[evidence], evidence=evidence)
-            print("EXPORTED !")
+        for i, evidence in enumerate(self.evidences):
+            export = DocxExporter(evidence_items=self.evidences[evidence], evidence=evidence, count=i+1)
+            print(evidence, "EXPORTED !")
 
 """
-class Evidence():
-    evidence_id             = ""
-    evidence_items          = []
-
-    def __init__(self, evidence_id):
-        self.evidence_id = evidence_id
-"""
-
 class EvidenceItem():
     evidence_id             = ""
     evidence                = None
+    folder_path             = ""
     file_id                 = ""
     image_path              = ""
     video_thumbnails_paths  = []
@@ -128,7 +136,8 @@ class EvidenceItem():
                  full_path,
                  file_name,
                  created_at,
-                 updated_at):
+                 updated_at,
+                 folder_path):
         self.evidence_id = evidence_id
         self.file_id = file_id
         self.image_path = image_path
@@ -141,6 +150,11 @@ class EvidenceItem():
         self.updated_at = updated_at
         self.created_at_str = datetime.strftime(self.created_at, '%d.%m.%Y') if self.created_at else ''
         self.updated_at_str = datetime.strftime(self.updated_at, '%d.%m.%Y') if self.updated_at else ''
+        self.folder_path = folder_path
+
+    @property
+    def image_full_path(self):
+        return f"{self.folder_path}/{self.image_path}"
 
     @property
     def serialize(self):
@@ -156,56 +170,68 @@ class EvidenceItem():
             "updated_at":self.updated_at,
             "video_thumbnails_paths":self.video_thumbnails_paths,
         }
-
+"""
 
 class DocxExporter():
+    evidence                = ""
     evidence_items          = []
+    count                   = 1
 
     gallery_template_path   = "./resources/templates/Images/template_for_gallery.docx"
     listing_template_path   = "./resources/templates/Images/template_for_list.docx"
 
     gallery_docx            = None
     listing_docx            = None
+
+    context                 = dict()
     
     start_date              = "Date de début"
     end_date                = "Date de fin"
 
-    def __init__(self, evidence_items, evidence):
+    def __init__(self, evidence_items, evidence, count):
+        self.evidence = evidence
         self.evidence_items = evidence_items
+        self.count = count
         
         self.sort_items_by_date()
-        """
         self.create_docx_instances()
-
-        context = { "items" : self.evidence_items,
-                    "evidence": evidence,
-                    "start_date": self.start_date,
-                    "end_date": self.end_date,}
-
-        self.listing_docx.render(context)
-        self.listing_docx.save(f"Evidence {evidence} list.docx")
-        """
-        # self.gallery_docx.render(context)
-        # self.gallery_docx.save(f"Evidence {evidence} images.docx")
+        self.create_context()
+        self.create_docx_images()
+        self.render()
 
     def create_docx_instances(self):
         self.listing_docx = DocxTemplate(self.listing_template_path)
         self.gallery_docx = DocxTemplate(self.gallery_template_path)
 
+    def create_context(self):
+        self.context = { "items" : self.evidence_items,
+                         "evidence": self.evidence,
+                         "start_date": self.start_date,
+                         "end_date": self.end_date,
+                         "count": self.count}
+
     def sort_items_by_date(self):
         if self.evidence_items and len(self.evidence_items) > 0:
             self.evidence_items
-            dated_elements = sorted(
-                    [item for item in self.evidence_items if (item.updated_at and isinstance(item.updated_at, datetime))],
-                    key=lambda item:(item.updated_at))
+            items = sorted(
+                    [item for item in self.evidence_items if (item["updated_at"] and isinstance(item["updated_at"], datetime))],
+                    key=lambda item:(item["updated_at"]))
 
-            undated_elements = [item for item in self.evidence_items if not item.updated_at]
+            undated_items = [item for item in self.evidence_items if not item["updated_at"]]
+            items.extend(undated_items)
+            self.evidence_items = items
 
-            a = dated_elements.append(undated_elements)
+    def create_docx_images(self):
+        for item in self.context['items']:
+            item["image"] = InlineImage(self.gallery_docx,
+                                        image_descriptor=item["image_full_path"],
+                                        height=Mm(40))
 
-            debug(f'{type(dated_elements)} - {type(undated_elements)} - {len(a)}')
+    def render(self):
+        for item in self.context['items']:
+            print(item["image"])
+        self.listing_docx.render(self.context)
+        self.listing_docx.save(f"Evidence {self.evidence} list.docx")
 
-    def create_docx_img(self):
-        image      = InlineImage("",
-                                 image_descriptor=f"./lace_xml_export/Images/asdf",
-                                 height=Mm(40))
+        self.gallery_docx.render(self.context)
+        self.gallery_docx.save(f"Evidence {self.evidence} images.docx")
